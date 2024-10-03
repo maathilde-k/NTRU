@@ -2,10 +2,11 @@ import random
 
  R.<X> = Integers(0)[]
 
+# Define multiplication in the quotient ring
 def convolution(f,g,N):
-    #This could also be done by list comprehension for better performance
     return f*g %(X^N -1)
 
+# Generate polynomial keys 
 def generate_key(dpos,dneg,N):
     # We first randomly place dpos 1s and then dneg -1s,
     # the rest are 0 
@@ -23,32 +24,30 @@ def generate_key(dpos,dneg,N):
     return R(poly)
 
 def poly_mod(f,q):
-    # This can be done by list comprehension for better performance
     Rq.<X> = Integers(q)[]
     coefflist = f.list()
     return Rq(coefflist)
 
+# Define the center lift of a polynomial
 def center_lift(f,p):
-    # Define the center lift of a polynomial
     coefflist = R(f).list()
     return R([((coefflist[i] + p//2) %p) - p//2 for i in range(len(coefflist))])
 
+# Compute the inverse of the polynomial f modulo a prime j
 def inverse_prime(f,j,N):
-    #find the inverse of the polynomialm f modulo a prime j
     # We could also do this using the extended euclidian algorithm 
     # since // is implemented modulo primes
     Rj.<X> = Integers(j)[]
     RR = Rj.quotient(X^(N) -1)
     return R(lift(RR(f.list())^(-1)))
 
-def inverse_prime_pow(f,t,q,N):
-    # find the inverse of the polynomialm f modulo a prime power q of t
+# Compute the inverse of the polynomialm f modulo a prime power q of t
     # The idea here is that we first find an inverse g mod t. 
     # Then we know that g(x)*f(x) = 1 - tr(x). 
     # This means that (1 + tr(x))g(x)*f(x) = 1 - t^2r^2(x)
     # We iterate this process until we get g'(x)f(x) = 1 - qr^m(x), 
     # and g'(x) is the inverse of f(x) mod q
-    
+def inverse_prime_pow(f,t,q,N):
     assert q.is_power_of(t)
     g = inverse_prime(f,t,N)
     assert poly_mod(convolution(f,g,N),t) == 1
@@ -58,20 +57,17 @@ def inverse_prime_pow(f,t,q,N):
             return g
         g = center_lift(convolution(g,2-r,N),q)
 
-def inverse(f,q,N):
-    # find the inverse of f modulo q where q is composite
+# find the inverse of f modulo q where q is composite
     # We first find the inverse modulo the prime powers composing q
     # Then we use the CRT to find the inverse mod the product of those prime powers, aka q
-    
+def inverse(f,q,N):
     # prime factorization of q
     fact = factor(q)
     factors = list(fact)
-    
     # inverses mod prime powers
     inverse_dict = {}
     for l in factors:
         inverse_dict[l[0]] = inverse_prime_pow(f,l[0],(l[0]^l[1]),N)
-        
     # CRT to find the inverse mod q
     inverse = 0
     for i in factors:
@@ -96,29 +92,23 @@ def NTRU_setup(N, p, q, d):
             Fp = inverse(f,p,N)
             Fq = inverse(f,q,N)
             break
-        except: pass
-    
+        except: pass  
     assert poly_mod(convolution(f,Fp,N),p) == 1
     assert poly_mod(convolution(f,Fq,N),q) == 1
 
     #generate key g with coefficients 1,0,-1
     g = generate_key(d,d,N)
-    
     #create the public key
     h = poly_mod(convolution(Fq,g,N),q)
-
     return f, Fp, h
 
 def NTRU_encrypt(m,p,q,N,h):
-
     #generate a random perturbation
     r = generate_key(d,d,N)
-    
     #return the encrypted message
     return poly_mod(p*convolution(h,r,N) + m,q)
 
 def NTRU_decrypt(f,Fp,e,p,q,N):
-
     a = R(center_lift(convolution(f,e,N),q))
     return center_lift(convolution(a,Fp,N),p)
 
