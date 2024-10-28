@@ -113,7 +113,7 @@ def NTRU_decrypt(f,Fp,e,p,q,N):
     return center_lift(convolution(a,Fp,N),p)
 
 #change parameters to play with it as you see fit :)
-# the current parameters are considered "safe" fi we assume that the key generation is truly random
+# the current parameters are considered "safe" if we assume that the key generation is truly random
 p = 3
 q = 4096
 R.<X> = Integers(0)[]
